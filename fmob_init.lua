@@ -80,7 +80,7 @@ stonesnake:register_spawn("stonesnake:stonesnake", "default:stone", -1, 14, 1800
 -- -- DEBUG
 -- minetest.register_on_joinplayer(function(player)
 --     minetest.after(2, function(player)
---         local pos = player:getpos()
+--         local pos = player:get_pos()
 --         minetest.add_entity({x=pos.x, y=pos.y+2, z=pos.z}, "stonesnake:stonesnake")
 --     end, player)
 -- end)

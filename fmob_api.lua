@@ -14,9 +14,9 @@ local difficulty = tonumber(minetest.settings:get("mob_difficulty")) or 1.0
 local show_health = minetest.settings:get_bool("mob_show_health") ~= false
 local max_per_block = tonumber(minetest.settings:get("max_objects_per_block") or 99)
 
-local display_mob_spawn = minetest.setting_getbool("display_mob_spawn")
-local only_peaceful_mobs = minetest.setting_getbool("only_peaceful_mobs")
-local enable_damage = minetest.setting_getbool("enable_damage")
+local display_mob_spawn = minetest.settings:get_bool("display_mob_spawn")
+local only_peaceful_mobs = minetest.settings:get_bool("only_peaceful_mobs")
+local enable_damage = minetest.settings:get_bool("enable_damage")
 
 stonesnake.default_parameters = {
     _cmi_is_mob = true,
@@ -118,9 +118,9 @@ stonesnake.default_functions = {
             return
         end
         self.object:set_armor_groups({fleshy=self.armor})
-        self.object:setacceleration({x=0, y=-10, z=0})
+        self.object:set_acceleration({x=0, y=-10, z=0})
         self.state = "stand"
-        self.object:setvelocity({x=0, y=self.object:getvelocity().y, z=0})
+        self.object:set_velocity({x=0, y=self.object:get_velocity().y, z=0})
         -- Face and move random direction
         self:do_change_direction()
 
@@ -157,7 +157,7 @@ stonesnake.default_functions = {
     end,
 
     -- set_velocity = function(self, v)
-    --     local yaw = self.object:getyaw()
+    --     local yaw = self.object:get_yaw()
     --     if self.drawtype == "side" then
     --         yaw = yaw+(math.pi/2)
     --     end
@@ -166,32 +166,32 @@ stonesnake.default_functions = {
     --     if yaw~=yaw then
     --         minetest.log("error", "mob at wrong position!!!"..yaw)
     --     end
-    --     self.object:setvelocity({x=x, y=self.object:getvelocity().y, z=z})
+    --     self.object:set_velocity({x=x, y=self.object:get_velocity().y, z=z})
     -- end,
     --set mob speed preserving direction
     set_speed = function(self, s)
-        local yaw = self.object:getyaw()
+        local yaw = self.object:get_yaw()
         if self.drawtype == "side" then
             yaw = yaw+(math.pi/2)
         end
         local dir = yaw_vector(yaw)
         local v = vector.multiply(dir, s)
-        self.object:setvelocity(v)
+        self.object:set_velocity(v)
     end,
     --set mob speed and yump preserving direction
     set_jump = function(self, s)
-        local yaw = self.object:getyaw()
+        local yaw = self.object:get_yaw()
         if self.drawtype == "side" then
             yaw = yaw+(math.pi/2)
         end
         local dir = yaw_vector(yaw)
         local v = vector.multiply(dir, s)
         v = vector.add(v, {x=0,y=s*2,z=0})  -- speed up is twice as speed forward
-        self.object:setvelocity(v)
+        self.object:set_velocity(v)
     end,
 
     get_velocity = function(self)
-        local v = self.object:getvelocity()
+        local v = self.object:get_velocity()
         return (v.x^2 + v.z^2)^(0.5)
     end,
 
@@ -327,7 +327,7 @@ stonesnake.default_functions = {
 
     			if obj and obj:get_luaentity() then
 
-    				obj:setvelocity({
+    				obj:set_velocity({
     					x = math.random(-10, 10) / 9,
     					y = 6,
     					z = math.random(-10, 10) / 9,
@@ -461,7 +461,7 @@ stonesnake.default_functions = {
     end,
     -- what node is mob standing in?
     foot_pos = function(self)
-        local pos = self.object:getpos()
+        local pos = self.object:get_pos()
         local y_level = self.collisionbox[2]
     	if self.child then
     		y_level = y_level * 0.5
@@ -470,7 +470,7 @@ stonesnake.default_functions = {
         return pos
     end,
     head_pos = function(self)
-        local pos = self.object:getpos()
+        local pos = self.object:get_pos()
         local y_level = self.collisionbox[5]
     	if self.child then
     		y_level = y_level * 0.5
@@ -504,11 +504,11 @@ stonesnake.default_functions = {
     -- Find location of player up to 120 nodes away - usually just as approximate direction to walk to
     -- Returns location, not player!
     look_for_player_far = function(self)
-        local pos = self.object:getpos()
+        local pos = self.object:get_pos()
         if pos then
             for _,player in pairs(minetest.get_connected_players()) do
                 if math.random(1, 100) > 20 and player and player:is_player() then
-                    local p = player:getpos()
+                    local p = player:get_pos()
                     local dist = vector.distance(pos, p)
                     if dist and dist < 120 then
                         return p -- location of any first player seen
@@ -620,7 +620,7 @@ stonesnake.default_functions = {
     end,
 
     do_jump = function(self)
-        local pos = self.object:getpos()
+        local pos = self.object:get_pos()
         self.start_jump_y = pos.y
         self:set_jump(self.run_velocity)
         self.state = "jump"
@@ -630,7 +630,7 @@ stonesnake.default_functions = {
     -- select random direction
     do_change_direction = function(self)
         local yaw = math.random(1, 360)/180*math.pi
-        self.object:setyaw(yaw)
+        self.object:set_yaw(yaw)
         self.movement_dir = yaw_vector(yaw)
         -- Actually maybe it is bad idea to use get_pos_relative() in these cases, but i dont want spend my energy for this.
         self.movement_dir_rounded = {x=0,y=0,z=0}
@@ -672,7 +672,7 @@ stonesnake.default_functions = {
             return false
         end
 
-        local pos = self.object:getpos()
+        local pos = self.object:get_pos()
         local target_pos = object:get_pos()
         if target_pos and vector.distance(pos, target_pos) < self.reach then
             local tmp_dir = self.movement_dir or {x=0, y=1, z=0}
@@ -769,7 +769,7 @@ stonesnake.default_functions = {
             end
         end
 
-        local pos = self.object:getpos()
+        local pos = self.object:get_pos()
         local fpos = self:foot_pos()
         local hpos = self:head_pos()
         local tpos = nil    -- target pos if any
@@ -858,18 +858,18 @@ stonesnake.default_functions = {
             self.step_timer = 0
             -- Gravity ...
             if self.state == "climb" then
-                self.object:setacceleration({x=0, y=0, z=0})
+                self.object:set_acceleration({x=0, y=0, z=0})
             elseif self.fly and self.standing_in == self.fly_in and self.state == "stand" then
-                self.object:setacceleration({x=0, y=0, z=0})
+                self.object:set_acceleration({x=0, y=0, z=0})
             elseif self.fly and self.standing_in == self.fly_in then
-                self.object:setacceleration({x=0, y=-1, z=0})
+                self.object:set_acceleration({x=0, y=-1, z=0})
             elseif self.floats and minetest.registered_nodes[self.standing_in].groups.water then
-                self.object:setacceleration({x=0, y=5, z=0})
+                self.object:set_acceleration({x=0, y=5, z=0})
             else
-                self.object:setacceleration({x=0, y=-10, z=0})
+                self.object:set_acceleration({x=0, y=-10, z=0})
             end
             -- Fall damage
-            if self.fall_damage and self.object:getvelocity().y == 0 then
+            if self.fall_damage and self.object:get_velocity().y == 0 then
                 if not self.old_y then
                     self.old_y = pos.y
                 else
@@ -1010,7 +1010,7 @@ stonesnake.default_functions = {
                     end
                 end
 
-                self.object:setyaw(vector_yaw(self.movement_dir))
+                self.object:set_yaw(vector_yaw(self.movement_dir))
                 if self:get_velocity() < 0.1 then
                     -- change command maybe?
                     if self:change_command_maybe("path_bump") then
@@ -1269,7 +1269,7 @@ function stonesnake:register_spawn_near(name, nodes, min_light, max_light, tries
 		if timer >= 30 then
 			for _,player in pairs(minetest.get_connected_players()) do
 				if math.random(1, 100) > 10 and player and player:is_player() then
-					local pos_player = player:getpos()
+					local pos_player = player:get_pos()
 					local add_mob=true
 					if pos_player.x>-1500 and pos_player.x<1500 and pos_player.z>-1500 and pos_player.z<1500 and pos_player.y>-80 then
 					--if pos_player.x>-500 and pos_player.x<500 and pos_player.z>-500 and pos_player.z<500 and pos_player.y>-80 then
@@ -1329,8 +1329,8 @@ function stonesnake:register_arrow(name, def)
 		hit_node = def.hit_node,
 
 		on_step = function(self, dtime)
-			local pos = self.object:getpos()
-			if minetest.get_node(self.object:getpos()).name ~= "air" then
+			local pos = self.object:get_pos()
+			if minetest.get_node(self.object:get_pos()).name ~= "air" then
 				self.hit_node(self, pos, node)
 				self.object:remove()
 				return

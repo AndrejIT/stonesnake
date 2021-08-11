@@ -4,8 +4,8 @@ stonesnake = {}
 
 dofile(minetest.get_modpath(minetest.get_current_modname()).."/fmob_init.lua")
 
-stonesnake.max_length = tonumber(minetest.setting_get("stonesnake_max_length") or 64)
-stonesnake.min_highscore = tonumber(minetest.setting_get("stonesnake_min_highscore") or 64)
+stonesnake.max_length = tonumber(minetest.settings:get("stonesnake_max_length") or 64)
+stonesnake.min_highscore = tonumber(minetest.settings:get("stonesnake_min_highscore") or 64)
 stonesnake.snakes = {}
 
 -- SNAKE DEF START
@@ -77,7 +77,7 @@ stonesnake.snake.drag = function(self)
             if minetest.is_player(obj) then
                 obj:add_player_velocity(vector.multiply(x1.dir, 3.95))
             else
-                obj:setvelocity(vector.multiply(x1.dir, 3.95))
+                obj:set_velocity(vector.multiply(x1.dir, 3.95))
             end
         end
         x1 = x1.tail
@@ -314,7 +314,7 @@ local snake = {
         			local leftover = inv:add_item("main", "stonesnake:snake")
         			-- If no room in inventory add a replacement snake to the world
         			if not leftover:is_empty() then
-        				minetest.add_item(self.object:getpos(), leftover)
+        				minetest.add_item(self.object:get_pos(), leftover)
         			end
         		end
         		self.object:remove()
@@ -371,13 +371,13 @@ local snake = {
 
         local yaw = vector_yaw(v)
 
-        self.object:setyaw(yaw)
+        self.object:set_yaw(yaw)
     end,
     set_velocity = function(self, v)
         if not v then
             v = {x=0, y=0, z=0}
         end
-        self.object:setvelocity(v)
+        self.object:set_velocity(v)
     end,
 
 

@@ -26,7 +26,9 @@ end
 
 --position, relative to
 -- this function is available separatelly in coordinate_helper mod
-if not _G['get_pos_relative'] then   --check global table if function already defined from coordinate_helper mod
+if _G['get_pos_relative'] then   --check global table if function already defined from coordinate_helper mod
+    -- do nothing for now...
+else
     -- x-FRONT/BACK, z-LEFT/RIGHT, y-UP/DOWN
     function get_pos_relative(position, rel_pos, face_vector, down_vector)
         local pos = {x=position.x,y=position.y,z=position.z}
