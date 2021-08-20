@@ -75,7 +75,7 @@ stonesnake:register_mob("stonesnake:stonesnake", {
 })
 -- stonesnake:register_spawn_near("stonesnake:stonesnake", "default:stone", -1, 4, 2)
 
-stonesnake:register_spawn("stonesnake:stonesnake", "default:stone", -1, 14, 1800000, 1, 0, 500)
+stonesnake:register_spawn("stonesnake:stonesnake", "default:stone", -1, 14, 3600000, 1, 0, 500)
 
 -- -- DEBUG
 -- minetest.register_on_joinplayer(function(player)

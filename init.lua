@@ -75,7 +75,7 @@ stonesnake.snake.drag = function(self)
         local objs = minetest.get_objects_inside_radius(pos_above, 1)
         for _, obj in pairs(objs) do
             if minetest.is_player(obj) then
-                obj:add_player_velocity(vector.multiply(x1.dir, 3.95))
+                obj:add_velocity(vector.multiply(x1.dir, 3.95))
             else
                 obj:set_velocity(vector.multiply(x1.dir, 3.95))
             end
@@ -426,7 +426,7 @@ minetest.register_craftitem("stonesnake:snake", {
 
             -- snake_entity:set_properties({owner=owner})
 
-    		if not minetest.setting_getbool("creative_mode") then
+    		if not minetest.settings:get_bool("creative_mode") then
     			itemstack:take_item()
     		end
         end

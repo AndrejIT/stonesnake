@@ -398,12 +398,13 @@ stonesnake.default_functions = {
                 proceed_die = false
             end
 
-        	if proceed_die and use_cmi and cmi.notify_die(self.object, cmi_cause) == false then
-                proceed_die = false
-        	end
+            -- Not used at the moment
+        	-- if proceed_die and use_cmi and cmi.notify_die(self.object, cmi_cause) == false then
+            --     proceed_die = false
+        	-- end
 
             if proceed_die then
-                state = "die"
+                self.state = "die"
                 -- mob_sound(self, self.sounds.death)
                 if self.animation
             	   and self.animation.die_start
