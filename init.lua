@@ -5,11 +5,12 @@ stonesnake = {}
 dofile(minetest.get_modpath(minetest.get_current_modname()).."/fmob_init.lua")
 
 stonesnake.max_length = tonumber(minetest.settings:get("stonesnake_max_length") or 64)
-stonesnake.min_highscore = tonumber(minetest.settings:get("stonesnake_min_highscore") or 64)
+stonesnake.min_highscore = tonumber(minetest.settings:get("stonesnake_min_highscore") or 8)
 stonesnake.snakes = {}
 
 -- SNAKE DEF START
 stonesnake.snake = {}
+stonesnake.snake.owner = ''
 stonesnake.snake.alive = true
 stonesnake.snake.entity = nil
 stonesnake.snake.score = 0
@@ -91,7 +92,7 @@ stonesnake.snake.die = function(self)
     local x1 = self.head
     local x2 = self.head
     local node = minetest.get_node_or_nil(x2.pos)
-    if node and node.name == 'default:cobble' then
+    if node and (node.name == 'default:cobble' or node.name == 'stonesnake:cobble') then
         minetest.set_node(x2.pos, {name="air"})
     end
     effect(x2.pos, 20, "tnt_smoke.png")
@@ -102,7 +103,7 @@ stonesnake.snake.die = function(self)
         effect(x1.pos, 20, "tnt_smoke.png")
     end
     local node = minetest.get_node_or_nil(x1.pos)
-    if node and node.name == 'default:cobble' then
+    if node and (node.name == 'default:cobble' or node.name == 'stonesnake:cobble') then
         minetest.set_node(x1.pos, {name="air"})
     end
     effect(x1.pos, 20, "tnt_smoke.png")
@@ -113,9 +114,13 @@ stonesnake.snake.die = function(self)
 
     if self.entity and self.entity.driver then
         if self.score > stonesnake.min_highscore then
-            minetest.chat_send_all("Player '"..self.entity.driver.."' scored "..self.score.." in stonesnake game.")
-        elseif self.entity.driver then
-            minetest.chat_send_player(self.entity.driver, "You scored "..self.score.." in stonesnake game.")
+            local is_highscore = stonesnake:update(self.entity.driver, self.score)
+            if is_highscore then
+                minetest.chat_send_all("Player '"..self.entity.driver.."' got new highscore "..self.score.." in stonesnake game. See /stonesnake for list.")
+                stonesnake:prize_drop(self.head.pos)
+            elseif self.entity.driver then
+                minetest.chat_send_player(self.entity.driver, "You scored "..self.score.." in stonesnake game.")
+            end
         end
         minetest.log("action", "Player "..self.entity.driver.." ended stonesnake game. Score: "..self.score)
     end
@@ -126,11 +131,12 @@ stonesnake.snake.die = function(self)
 end
 -- SNAKE DEF END
 
-stonesnake.add_snake = function(pos, dir)
+stonesnake.add_snake = function(pos, dir, player_name)
     local snake = {}
     setmetatable(snake, {__index = stonesnake.snake})
     snake.head.pos = vector.new(pos)
     snake.dir = vector.new(dir)
+    snake.owner = player_name
     table.insert(stonesnake.snakes, snake)
     return snake
 end
@@ -148,7 +154,12 @@ stonesnake.step = function()
     for _,snake in pairs(stonesnake.snakes) do
         local node = minetest.get_node_or_nil(snake.head.pos)
         if node and node.name == 'air' then
-            minetest.set_node(snake.head.pos, {name="default:cobble"})
+            -- minetest.chat_send_all(snake.owner)
+            if snake.owner == stonesnake.champion_active then
+                minetest.set_node(snake.head.pos, {name="stonesnake:cobble"})
+            else
+                minetest.set_node(snake.head.pos, {name="default:cobble"})
+            end
         end
     end
 
@@ -235,7 +246,7 @@ stonesnake.step = function()
     for _,snake in pairs(stonesnake.snakes) do
         if snake.old_tail ~= nil then
             local node = minetest.get_node_or_nil(snake.old_tail.pos)
-            if node and node.name == 'default:cobble' then
+            if node and (node.name == 'default:cobble' or node.name == 'stonesnake:cobble') then
                 minetest.set_node(snake.old_tail.pos, {name="air"})
             end
             snake.old_tail = nil
@@ -275,7 +286,7 @@ local snake = {
                 local dir = clicker:get_look_dir()
                 dir.y = 0
                 dir = vector.round(vector.normalize(dir))
-                self.snake_object = stonesnake.add_snake(pos, dir)
+                self.snake_object = stonesnake.add_snake(pos, dir, player_name)
                 self.snake_object.entity = self
                 local rpos = vector.round(pos)
                 minetest.log("action", "Player "..player_name.." started stonesnake game at "..rpos.x..","..rpos.y..","..rpos.z)
@@ -408,6 +419,10 @@ local snake = {
 
 minetest.register_entity("stonesnake:snake", snake)
 
+local golden_snake = table.copy(snake)
+golden_snake.textures = {"golden_snake.png"}
+minetest.register_entity("stonesnake:golden_snake", golden_snake)
+
 minetest.register_craftitem("stonesnake:snake", {
 	description = "Stonesnake game",
 	inventory_image = minetest.inventorycube("default_cobble.png", "default_cobble.png", "stonesnake.png"),
@@ -422,7 +437,11 @@ minetest.register_craftitem("stonesnake:snake", {
         if minetest.get_node(pointed_thing.above).name == "air" then
             local pos = pointed_thing.above
             local owner = placer:get_player_name()
-    		local snake_entity = minetest.add_entity(pos, "stonesnake:snake")
+            if owner == stonesnake.champion_active then
+                local snake_entity = minetest.add_entity(pos, "stonesnake:golden_snake")
+            else
+    		    local snake_entity = minetest.add_entity(pos, "stonesnake:snake")
+            end
 
             -- snake_entity:set_properties({owner=owner})
 
@@ -443,6 +462,16 @@ minetest.register_chatcommand("stonesnake", {
         else
             minetest.chat_send_player(playername, 'Stonesnake leave in stone desert and eats stone. It is rare and wery strong.')
             minetest.chat_send_player(playername, 'If defeated, Stonesnake drop special item.')
+
+            for id, item in pairs(stonesnake.champions_list) do
+                local name = item[1] or ''
+                local score = tonumber(item[2]) or 0
+                if name == stonesnake.champion_active then
+                    minetest.chat_send_player(playername, score.." ".."***"..name.."*** - current stonesnake champion")
+                else
+                    minetest.chat_send_player(playername, score.." "..name.."")
+                end
+            end
         end
 	end,
 })
@@ -455,3 +484,180 @@ minetest.register_globalstep(function(dtime)
 		timer = 0
 	end
 end)
+
+
+stonesnake.champions_list = {}  --{name, score}
+stonesnake.champions_highscore_min = nil
+stonesnake.champion_active = ''
+
+-- Save and load champion list
+stonesnake.filename = minetest.get_worldpath() .. "/stonesnake_champions_by_name.txt"
+
+function stonesnake:save()
+    local datastring = minetest.serialize(self.champions_list)
+    if not datastring then
+        return
+    end
+    local file, err = io.open(self.filename, "w")
+    if err then
+        return
+    end
+    file:write(datastring)
+    file:close()
+end
+
+function stonesnake:load()
+    local file, err = io.open(self.filename, "r")
+    if err then
+        self.champions_list = {}
+        return
+    end
+    self.champions_list = minetest.deserialize(file:read("*all"))
+    if type(self.champions_list) ~= "table" then
+        self.champions_list = {}
+    end
+    file:close()
+
+    local highscore_max = 0
+    -- find smallest record
+    -- find active champion
+    for id, item in pairs(self.champions_list) do
+        local name = item[1] or ''
+        local score = tonumber(item[2]) or 0
+        if self.champions_highscore_min == nil then
+            self.champions_highscore_min = score
+        end
+        if score < self.champions_highscore_min then
+            self.champions_highscore_min = score
+        end
+        if score > highscore_max then
+            self.champion_active = name
+            highscore_max = score
+        end
+    end
+end
+-- Update champion list
+function stonesnake:update(new_name, new_score)
+    if self.champions_highscore_min == nil or new_score > self.champions_highscore_min then
+        table.insert(self.champions_list, {new_name, new_score})
+    else
+        return false
+    end
+
+    function compare(a,b)
+        return a[2] > b[2]
+    end
+    table.sort(self.champions_list, compare)
+
+    local items_to_take = 5
+    if #self.champions_list < items_to_take then
+        items_to_take = #self.champions_list
+    end
+
+    local new_champions_list = {}
+    for id=1,items_to_take do
+        table.insert(new_champions_list, self.champions_list[id])
+    end
+
+    self.champions_list = new_champions_list
+
+    local highscore_max = 0
+    -- find smallest record
+    -- find active champion
+    for id, item in pairs(self.champions_list) do
+        local name = item[1] or ''
+        local score = tonumber(item[2]) or 0
+        if self.champions_highscore_min == nil then
+            self.champions_highscore_min = score
+        end
+        if score < self.champions_highscore_min then
+            self.champions_highscore_min = score
+        end
+        if score > highscore_max then
+            self.champion_active = name
+            highscore_max = score
+        end
+    end
+
+    self:save()
+
+    return true
+end
+-- Drop prize from stonesnake game
+function stonesnake:prize_drop(pos)
+    	local drops = {
+            {name = "default:obsidian", chance = 3, min = 1,	max = 2,},
+            {name = "default:obsidian", chance = 3, min = 1,	max = 2,},
+            {name = "default:obsidian", chance = 3, min = 1,	max = 2,},
+            {name = "default:obsidian", chance = 3, min = 1,	max = 2,},
+            {name = "default:obsidian", chance = 3, min = 1,	max = 2,},
+            {name = "default:obsidian", chance = 3, min = 1,	max = 2,},
+            {name = "default:mese_crystal", chance = 2, min = 1, max = 1,},
+            {name = "default:mese_crystal", chance = 2, min = 1, max = 1,},
+            {name = "default:mese_crystal", chance = 2, min = 1, max = 1,},
+            {name = "default:mese_crystal", chance = 2, min = 1, max = 1,},
+            {name = "default:mese_crystal", chance = 2, min = 1, max = 1,},
+            {name = "default:mese_crystal", chance = 2, min = 1, max = 1,},
+            {name = "default:mese_crystal", chance = 2, min = 1, max = 1,},
+            {name = "default:mese_crystal", chance = 2, min = 1, max = 1,},
+            {name = "default:mese_crystal", chance = 2, min = 1, max = 1,},
+            {name = "default:gold_ingot", chance = 1, min = 1, max = 1,},
+            {name = "default:gold_ingot", chance = 1, min = 1, max = 1,},
+            {name = "default:gold_ingot", chance = 1, min = 1, max = 1,},
+            {name = "default:gold_ingot", chance = 1, min = 1, max = 1,},
+            {name = "default:gold_ingot", chance = 1, min = 1, max = 1,},
+            {name = "default:gold_ingot", chance = 1, min = 1, max = 1,},
+            {name = "default:gold_ingot", chance = 1, min = 1, max = 1,},
+            {name = "default:gold_ingot", chance = 1, min = 1, max = 1,},
+            {name = "default:gold_ingot", chance = 1, min = 1, max = 1,},
+            {name = "default:gold_ingot", chance = 1, min = 1, max = 1,},
+            {name = "default:gold_ingot", chance = 1, min = 1, max = 1,},
+            {name = "default:gold_ingot", chance = 1, min = 1, max = 1,},
+            {name = "default:gold_ingot", chance = 1, min = 1, max = 1,},
+            {name = "default:gold_ingot", chance = 1, min = 1, max = 1,},
+            {name = "default:gold_ingot", chance = 1, min = 1, max = 1,},
+            {name = "default:gold_ingot", chance = 1, min = 1, max = 1,},
+            {name = "default:gold_ingot", chance = 1, min = 1, max = 1,},
+            {name = "default:gold_ingot", chance = 1, min = 1, max = 1,},
+            {name = "default:gold_ingot", chance = 1, min = 1, max = 1,},
+            {name = "default:gold_ingot", chance = 1, min = 1, max = 1,},
+            {name = "default:gold_ingot", chance = 1, min = 1, max = 1,},
+            {name = "default:diamond", chance = 3, min = 1, max = 1,},
+            {name = "default:diamond", chance = 3, min = 1, max = 1,},
+            {name = "default:diamond", chance = 3, min = 1, max = 1,},
+            {name = "default:diamond", chance = 3, min = 1, max = 1,},
+            {name = "default:diamond", chance = 3, min = 1, max = 1,},
+        }
+
+    	for n = 1, #drops do
+    		if math.random(1, drops[n].chance) == 1 then
+    			num = math.random(drops[n].min, drops[n].max)
+    			item = drops[n].name
+
+    			-- add item if it exists
+    			obj = minetest.add_item(pos, ItemStack(item .. " " .. num))
+
+    			if obj and obj:get_luaentity() then
+    				obj:set_velocity({
+    					x = math.random(-10, 10) / 10,
+    					y = 12,
+    					z = math.random(-10, 10) / 10,
+    				})
+    			elseif obj then
+    				obj:remove() -- item does not exist
+    			end
+    		end
+    	end
+
+    	drops = {}
+end
+
+stonesnake:load()
+
+-- Register golden stonesnake cobble
+minetest.register_node("stonesnake:cobble", {
+	description = "Stonesnake cobble",
+	tiles = {"stonesnake_cobble.png"},
+	sounds = default.node_sound_stone_defaults(),
+	groups = {cracky = 1, level = 3, not_in_creative_inventory = 1},
+})
