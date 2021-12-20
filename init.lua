@@ -113,15 +113,23 @@ stonesnake.snake.die = function(self)
     end
 
     if self.entity and self.entity.driver then
-        if self.score > stonesnake.min_highscore then
-            local is_highscore = stonesnake:update(self.entity.driver, self.score)
-            if is_highscore then
-                minetest.chat_send_all("Player '"..self.entity.driver.."' got new highscore "..self.score.." in stonesnake game. See /stonesnake for list.")
-                stonesnake:prize_drop(self.head.pos)
-            elseif self.entity.driver then
-                minetest.chat_send_player(self.entity.driver, "You scored "..self.score.." in stonesnake game.")
+        local is_highscore = stonesnake:update(self.entity.driver, self.score)
+        if is_highscore then
+            minetest.chat_send_all("Player '"..self.entity.driver.."' got new highscore "..self.score.." in stonesnake game. See /stonesnake for list.")
+            stonesnake:prize_drop(self.head.pos)
+        elseif self.entity.driver then
+            minetest.chat_send_player(self.entity.driver, "You scored "..self.score.." in stonesnake game.")
+            for id, item in pairs(stonesnake.champions_list) do
+                local name = item[1] or ''
+                local score = tonumber(item[2]) or 0
+                if name == stonesnake.champion_active then
+                    minetest.chat_send_player(self.entity.driver, score.." ".."***"..name.."*** - current stonesnake champion")
+                else
+                    minetest.chat_send_player(self.entity.driver, score.." "..name.."")
+                end
             end
         end
+
         minetest.log("action", "Player "..self.entity.driver.." ended stonesnake game. Score: "..self.score)
     end
 
@@ -462,6 +470,7 @@ minetest.register_chatcommand("stonesnake", {
         else
             minetest.chat_send_player(playername, 'Stonesnake leave in stone desert and eats stone. It is rare and wery strong.')
             minetest.chat_send_player(playername, 'If defeated, Stonesnake drop special item.')
+            minetest.chat_send_player(playername, 'Player '..stonesnake.champion_active..' is current stonesnake champion and golden snake owner')
 
             for id, item in pairs(stonesnake.champions_list) do
                 local name = item[1] or ''
